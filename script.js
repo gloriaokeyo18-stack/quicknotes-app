@@ -1,78 +1,95 @@
-// 1. Select elements using querySelector
+// 1. Select elements
 const form = document.querySelector("#note-form");
 const input = document.querySelector("#note-input");
 const categorySelect = document.querySelector("#note-category");
 const notesList = document.querySelector("#notes-list");
+const errorMessage = document.querySelector("#error-message"); // NEW
+const noteCount = document.querySelector("#note-count"); // NEW
 
-// 2. Initialize the empty array to store note objects
 let notes = [];
 
-// 3. Render function: Rebuilds the list onto the webpage
+// 2. Render function
 function render() {
-  // Clear the current list out first
   notesList.textContent = "";
 
-  // Loop through our array and create HTML elements for each note
+  // NEW: Updating the note count message //
+  if (notes.length === 0) {
+    noteCount.textContent = "You have no notes yet.";
+  } else if (notes.length === 1) {
+    noteCount.textContent = "You have 1 note.";
+  } else {
+    noteCount.textContent = `You have ${notes.length} notes.`;
+  }
+
   notes.forEach((note) => {
-    // Create the main card container (<li>)
     const li = document.createElement("li");
-    // Add the base class AND the specific category class for the colored border
     li.className = `note-card category-${note.category}`;
 
-    // Create header container for category and date
     const headerDiv = document.createElement("div");
     headerDiv.className = "note-header";
 
-    // Create category label
     const categorySpan = document.createElement("span");
     categorySpan.className = "category-label";
     categorySpan.textContent = note.category;
 
-    // Create date label
     const dateSpan = document.createElement("span");
     dateSpan.textContent = note.createdAt;
 
-    // Append category and date to the header
     headerDiv.appendChild(categorySpan);
     headerDiv.appendChild(dateSpan);
 
-    // Create the paragraph for the actual note text
     const textP = document.createElement("p");
-    textP.textContent = note.text; // Ensures user input is safe!
+    textP.textContent = note.text;
 
-    // Create the delete button
     const deleteBtn = document.createElement("button");
     deleteBtn.className = "delete-btn";
     deleteBtn.textContent = "Delete";
 
-    // Assemble the card by appending everything to the <li>
+    // --- NEW: Delete button logic ---
+    // When clicked, keep all notes EXCEPT the one with this specific ID
+    deleteBtn.addEventListener("click", function () {
+      notes = notes.filter((n) => n.id !== note.id);
+      render(); // Re-draw the list without the deleted note
+    });
+
     li.appendChild(headerDiv);
     li.appendChild(textP);
     li.appendChild(deleteBtn);
 
-    // Finally, add the assembled card to the webpage
     notesList.appendChild(li);
   });
 }
 
-// 4. Listen for the form submission
+// 3. Form submission
 form.addEventListener("submit", function (event) {
-  event.preventDefault(); // Stop the page from reloading
+  event.preventDefault();
 
-  // Create the new note object
+  // --- NEW: Validation ---
+  const text = input.value.trim(); // .trim() removes accidental spaces at the start/end
+
+  // Check if empty
+  if (text === "") {
+    errorMessage.textContent = "Please type a note first.";
+    return; // Stops the function here so the note isn't added
+  }
+
+  // Check if too long
+  if (text.length > 200) {
+    errorMessage.textContent = "Notes must be 200 characters or fewer.";
+    return; // Stops the function here
+  }
+
+  // If we pass the checks, clear any existing error messages
+  errorMessage.textContent = "";
+
   const newNote = {
-    id: Date.now(), // Creates a unique number based on the exact millisecond
-    text: input.value,
+    id: Date.now(),
+    text: text,
     category: categorySelect.value,
-    createdAt: new Date().toLocaleString(), // Creates a readable date and time string
+    createdAt: new Date().toLocaleString(),
   };
 
-  // Add it to our array
   notes.push(newNote);
-
-  // Clear the input box for the next note
   input.value = "";
-
-  // Re-render the updated list
   render();
 });
