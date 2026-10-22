@@ -3,16 +3,28 @@ const form = document.querySelector("#note-form");
 const input = document.querySelector("#note-input");
 const categorySelect = document.querySelector("#note-category");
 const notesList = document.querySelector("#notes-list");
-const errorMessage = document.querySelector("#error-message"); // NEW
-const noteCount = document.querySelector("#note-count"); // NEW
+const errorMessage = document.querySelector("#error-message");
+const noteCount = document.querySelector("#note-count");
+const searchInput = document.querySelector("#search-input"); // NEW
 
 let notes = [];
+
+// --- NEW: Load notes from localStorage when the page opens ---
+const savedNotes = localStorage.getItem("quicknotes-data");
+if (savedNotes) {
+  notes = JSON.parse(savedNotes); // Convert the string back into a JavaScript array
+}
+
+// --- NEW: Helper function to save notes to localStorage ---
+function saveNotes() {
+  localStorage.setItem("quicknotes-data", JSON.stringify(notes)); // Convert array to string
+}
 
 // 2. Render function
 function render() {
   notesList.textContent = "";
 
-  // NEW: Updating the note count message //
+  // Update the note count message
   if (notes.length === 0) {
     noteCount.textContent = "You have no notes yet.";
   } else if (notes.length === 1) {
@@ -21,7 +33,24 @@ function render() {
     noteCount.textContent = `You have ${notes.length} notes.`;
   }
 
-  notes.forEach((note) => {
+  // --- NEW: Filter notes based on what is typed in the search box ---
+  const searchTerm = searchInput.value.trim().toLowerCase();
+  const filteredNotes = notes.filter((note) =>
+    note.text.toLowerCase().includes(searchTerm),
+  );
+
+  // --- NEW: Show a message if the search finds nothing ---
+  if (filteredNotes.length === 0 && notes.length > 0) {
+    const noMatchLi = document.createElement("li");
+    noMatchLi.textContent = "No notes match your search.";
+    noMatchLi.style.padding = "1rem";
+    noMatchLi.style.color = "#666";
+    notesList.appendChild(noMatchLi);
+    return; // Stop here so it doesn't try to draw empty cards
+  }
+
+  // Draw the filtered notes
+  filteredNotes.forEach((note) => {
     const li = document.createElement("li");
     li.className = `note-card category-${note.category}`;
 
@@ -45,11 +74,10 @@ function render() {
     deleteBtn.className = "delete-btn";
     deleteBtn.textContent = "Delete";
 
-    // --- NEW: Delete button logic ---
-    // When clicked, keep all notes EXCEPT the one with this specific ID
     deleteBtn.addEventListener("click", function () {
       notes = notes.filter((n) => n.id !== note.id);
-      render(); // Re-draw the list without the deleted note
+      saveNotes(); // --- NEW: Save to memory after deleting ---
+      render();
     });
 
     li.appendChild(headerDiv);
@@ -64,22 +92,18 @@ function render() {
 form.addEventListener("submit", function (event) {
   event.preventDefault();
 
-  // --- NEW: Validation ---
-  const text = input.value.trim(); // .trim() removes accidental spaces at the start/end
+  const text = input.value.trim();
 
-  // Check if empty
   if (text === "") {
     errorMessage.textContent = "Please type a note first.";
-    return; // Stops the function here so the note isn't added
+    return;
   }
 
-  // Check if too long
   if (text.length > 200) {
     errorMessage.textContent = "Notes must be 200 characters or fewer.";
-    return; // Stops the function here
+    return;
   }
 
-  // If we pass the checks, clear any existing error messages
   errorMessage.textContent = "";
 
   const newNote = {
@@ -90,6 +114,16 @@ form.addEventListener("submit", function (event) {
   };
 
   notes.push(newNote);
+  saveNotes(); // --- NEW: Save to memory after adding a new note ---
+
   input.value = "";
   render();
 });
+
+// --- NEW: Re-render the list every time the user types a letter in the search box ---
+searchInput.addEventListener("input", function () {
+  render();
+});
+
+// --- NEW: Draw the notes immediately when the page first loads ---
+render();
